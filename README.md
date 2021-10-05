@@ -186,7 +186,7 @@ The three types of records that exist in such blocks are as follows:
 |--|--|--|
 |Control Record|Control Metadata Block  |Contains information about the *layout*, the *extend* area, and the *truncate* area |
 |Base Record|General Metadata Block|Contains the *symbol tables* that store information on the various *client*, *container* and *security* contexts associated with the Base Log File, as well as accounting information on these. |
-|Truncate Record|Scratch Metadata Block|Contains|
+|Truncate Record|Scratch Metadata Block|Contains information on every client (stream) that needs to have sectors changed as a result of a truncate operation, and the relevant sector byte changes.|
 
 #### Metadata Record Header
 All of these metadata records will be described in the next section, but first note that they all begin with the same header, shown below:
