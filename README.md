@@ -572,3 +572,52 @@ typedef struct _CLFSHASHTBL
 } CLFSHASHTBL, *PCLFSHASHTBL;
 ```
 This allows the offsets from the base record header to be stored as pointers in-memory, along with the bucket count and a pointer back to the `CClfsBaseFile`.
+## Truncate Record
+The *truncate record* is the last record type and is used during log truncation. The data structure (`CLFS_TRUNCATE_RECORD_HEADER`) is not present in the public symbols, but the `ValidateTruncateRecord`, `TruncateLogRewriteOwnerPages`, and `TruncateLogStart` functions can be used to infer the fields.
+
+Its best guess definition is given below:
+```
+typedef struct _CLFS_TRUNCATE_RECORD_HEADER
+{
+    CLFS_METADATA_RECORD_HEADER hdrBaseRecord;
+    ULONG coffClientChange;
+    ULONG coffOwnerPage;
+} CLFS_TRUNCATE_RECORD_HEADER, *PCLFS_TRUNCATE_RECORD_HEADER;
+```
+Apart from the usual header, the offset to the first `CLFS_TRUNCATE_CLIENT_CHANGE` structure is indicated, followed by the offset of the first owner page. Both of these are present in the scratch metadata block.
+
+### Client Change Descriptor
+
+The `CLFS_TRUNCATE_CLIENT_CHANGE` structure *is* defined in the symbols, and is shown below:
+
+```
+typedef struct _CLFS_TRUNCATE_CLIENT_CHANGE
+{
+    CLFS_CLIENT_ID cidClient;
+    CLFS_LSN lsn;
+    CLFS_LSN lsnClient;
+    CLFS_LSN lsnRestart;
+    USHORT cLength;
+    USHORT cOldLength;
+    ULONG cSectors;
+    CLFS_SECTOR_CHANGE rgSectors[ANYSIZE_ARRAY];
+} CLFS_TRUNCATE_CLIENT_CHANGE, *PCLFS_TRUNCATE_CLIENT_CHANGE;
+```
+This structure specifies which client identifier (stream identifier) is being modified, and the physical and virtual LSN of the replacement block. 
+
+Once truncation is completed, the `lsnRestart` field will contain the LSN of the new restart area.
+
+The next two fields host the size of the new replaced block, as well as the size of the old block.
+
+Finally, for each sector subject to changes as part of truncation, an array of `cSectors` is present at the end of the structure (`rgSectors`), which is made up of `CLFS_SECTOR_CHANGE` structures.
+
+#### Sector Change Descriptor
+```
+typedef struct _CLFS_SECTOR_CHANGE
+{
+    ULONG iSector;
+    ULONG ulUnused;
+    BYTE rgbSector[CLFS_SECTOR_SIZE];
+} CLFS_SECTOR_CHANGE, *PCLFS_SECTOR_CHANGE;
+```
+Quite simply, these structures indicate the target sector index, and the new sector data to write.
